@@ -1,0 +1,23 @@
+Package: endogCopulaBayes
+Type: Package
+Title: Bayesian Gaussian Copula Endogeneity Correction
+Version: 0.0.0.9000
+Authors@R: person(given = "Ashwin", family = "Malshe", role = c("aut", "cre"))
+Description: Bayesian sampler for Gaussian copula regression models ported from the
+    original EndogCopula research scripts.
+License: MIT + file LICENSE
+Depends: R (>= 4.1)
+Imports: LaplacesDemon,
+         Metrics,
+         copula,
+         invgamma,
+         mvtnorm,
+         parallel,
+         pbapply,
+         stats
+Suggests: testthat (>= 3.0.0)
+Encoding: UTF-8
+LazyData: true
+Roxygen: list(markdown = TRUE)
+RoxygenNote: 7.3.3
+Config/testthat/edition: 3
