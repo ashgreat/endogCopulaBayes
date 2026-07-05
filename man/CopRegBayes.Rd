@@ -9,7 +9,8 @@ CopRegBayes(
   iterations = 10000,
   burnin = 2000,
   thin = 10,
-  startvalue = NULL
+  startvalue = NULL,
+  seed = NULL
 )
 }
 \arguments{
@@ -23,10 +24,53 @@ CopRegBayes(
 
 \item{startvalue}{Optional numeric vector of starting values; if \code{NULL}, a
 default based on OLS estimates and Dirichlet draws is used.}
+
+\item{seed}{Optional integer passed to \code{\link[=set.seed]{set.seed()}} before any random
+number is drawn; if \code{NULL} (default) the current RNG state is used.}
 }
 \value{
-A list with the full \code{chain} and the thinned \code{posterior} sample.
+An object of class \code{endog_copula_bayes}: a list with components
+\describe{
+\item{\code{chain}}{Numeric matrix of dimension \verb{(iterations + 1) x (2 * N + 10)} holding the full MCMC chain, one draw per row. The
+columns follow the layout described above: the seven named model
+parameters, then the \code{2 * N} unnamed Dirichlet probability masses
+(\code{N} for \code{z}, \code{N} for \code{x}), then the three hyperprior variances.}
+\item{\code{posterior}}{Numeric matrix with the same columns as \code{chain},
+after discarding the first \code{burnin} rows and keeping every
+\code{thin}-th remaining row.}
+\item{\code{parameters}}{Character vector with the names of the ten tracked
+(named) parameters summarised by \code{\link[=summary.endog_copula_bayes]{summary.endog_copula_bayes()}}.}
+\item{\code{n}}{Number of complete observations used.}
+\item{\code{iterations}, \code{burnin}, \code{thin}, \code{seed}}{The sampler settings as
+supplied.}
+}
 }
 \description{
-Bayesian Gaussian Copula Sampler
+Metropolis-within-Gibbs sampler for the copula-based endogeneity
+correction of Haschka. The chain columns are laid out as in the reference
+implementation: columns 1--3 hold the regression coefficients (\code{beta_0},
+\code{beta_z}, \code{beta_x}), column 4 the residual variance (\code{sigma2}), columns
+5--7 the copula correlations (\code{rho_zx} between endogenous and exogenous
+regressor, \code{rho_ze} between endogenous regressor and error, \code{rho_xe}
+between exogenous regressor and error, the latter forced to zero), columns
+\code{8:(N + 7)} the Dirichlet probability masses for the distribution of \code{z},
+columns \code{(N + 8):(2 * N + 7)} the Dirichlet probability masses for the
+distribution of \code{x}, and the final three columns the hyperprior variances
+of the normal priors on the regression coefficients (\code{hyper_a},
+\code{hyper_b1}, \code{hyper_b2}). The Dirichlet mass columns are left unnamed.
+}
+\examples{
+set.seed(1)
+n <- 60
+z <- rlnorm(n)
+x <- rnorm(n)
+dat <- data.frame(y = 2 - 4 * z + 6 * x + rnorm(n, sd = sqrt(2)),
+                  z = z, x = x)
+fit <- CopRegBayes(dat, iterations = 100, burnin = 20, thin = 2, seed = 42)
+fit
+summary(fit)
+}
+\seealso{
+\code{\link[=summary.endog_copula_bayes]{summary.endog_copula_bayes()}} and
+\code{\link[=print.endog_copula_bayes]{print.endog_copula_bayes()}} for posterior summaries.
 }

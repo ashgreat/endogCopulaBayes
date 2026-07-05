@@ -1,7 +1,7 @@
 #' Bayesian Gaussian Copula Regression
 #'
 #' Internal helpers supporting the exported `CopRegBayes` sampler.
-#' @keywords internal
+#' @noRd
 
 # auxiliary functions
 aux1 <- function(h, param, W1, data) {
@@ -308,16 +308,66 @@ metropolis_Gibbs_MCMC1 <- function(startvalue, iterations, data) {
 
 #' Bayesian Gaussian Copula Sampler
 #'
+#' Metropolis-within-Gibbs sampler for the copula-based endogeneity
+#' correction of Haschka. The chain columns are laid out as in the reference
+#' implementation: columns 1--3 hold the regression coefficients (`beta_0`,
+#' `beta_z`, `beta_x`), column 4 the residual variance (`sigma2`), columns
+#' 5--7 the copula correlations (`rho_zx` between endogenous and exogenous
+#' regressor, `rho_ze` between endogenous regressor and error, `rho_xe`
+#' between exogenous regressor and error, the latter forced to zero), columns
+#' `8:(N + 7)` the Dirichlet probability masses for the distribution of `z`,
+#' columns `(N + 8):(2 * N + 7)` the Dirichlet probability masses for the
+#' distribution of `x`, and the final three columns the hyperprior variances
+#' of the normal priors on the regression coefficients (`hyper_a`,
+#' `hyper_b1`, `hyper_b2`). The Dirichlet mass columns are left unnamed.
+#'
 #' @param data Data frame containing the columns `y`, `z`, and `x`.
 #' @param iterations Total number of MCMC iterations.
 #' @param burnin Number of initial iterations to discard.
 #' @param thin Thinning interval applied after burn-in.
 #' @param startvalue Optional numeric vector of starting values; if `NULL`, a
 #'   default based on OLS estimates and Dirichlet draws is used.
-#' @return A list with the full `chain` and the thinned `posterior` sample.
+#' @param seed Optional integer passed to [set.seed()] before any random
+#'   number is drawn; if `NULL` (default) the current RNG state is used.
+#' @return An object of class `endog_copula_bayes`: a list with components
+#'   \describe{
+#'     \item{`chain`}{Numeric matrix of dimension `(iterations + 1) x
+#'       (2 * N + 10)` holding the full MCMC chain, one draw per row. The
+#'       columns follow the layout described above: the seven named model
+#'       parameters, then the `2 * N` unnamed Dirichlet probability masses
+#'       (`N` for `z`, `N` for `x`), then the three hyperprior variances.}
+#'     \item{`posterior`}{Numeric matrix with the same columns as `chain`,
+#'       after discarding the first `burnin` rows and keeping every
+#'       `thin`-th remaining row.}
+#'     \item{`parameters`}{Character vector with the names of the ten tracked
+#'       (named) parameters summarised by [summary.endog_copula_bayes()].}
+#'     \item{`n`}{Number of complete observations used.}
+#'     \item{`iterations`, `burnin`, `thin`, `seed`}{The sampler settings as
+#'       supplied.}
+#'   }
+#' @seealso [summary.endog_copula_bayes()] and
+#'   [print.endog_copula_bayes()] for posterior summaries.
+#' @examples
+#' set.seed(1)
+#' n <- 60
+#' z <- rlnorm(n)
+#' x <- rnorm(n)
+#' dat <- data.frame(y = 2 - 4 * z + 6 * x + rnorm(n, sd = sqrt(2)),
+#'                   z = z, x = x)
+#' fit <- CopRegBayes(dat, iterations = 100, burnin = 20, thin = 2, seed = 42)
+#' fit
+#' summary(fit)
+#' @importFrom copula dCopula normalCopula P2p
+#' @importFrom mvtnorm rmvnorm
+#' @importFrom LaplacesDemon rinvwishart dinvwishart
+#' @importFrom stats coef complete.cases dnorm lm median pnorm qgamma qnorm
+#'   quantile residuals runif sd var
 #' @export
 CopRegBayes <- function(data, iterations = 10000, burnin = 2000, thin = 10,
-                        startvalue = NULL) {
+                        startvalue = NULL, seed = NULL) {
+  if (!is.null(seed)) {
+    set.seed(seed)
+  }
   dataset <- as.data.frame(data)
   required <- c("y", "z", "x")
   missing <- setdiff(required, names(dataset))
@@ -331,6 +381,7 @@ CopRegBayes <- function(data, iterations = 10000, burnin = 2000, thin = 10,
   if (N == 0) {
     stop("No complete observations available.", call. = FALSE)
   }
+  dataset$const <- 1
   if (is.null(startvalue)) {
     mod1 <- stats::lm(y ~ z + x, dataset)
     startvalue <- c(
@@ -347,6 +398,10 @@ CopRegBayes <- function(data, iterations = 10000, burnin = 2000, thin = 10,
   }
   chain <- metropolis_Gibbs_MCMC1(startvalue = startvalue, iterations = iterations,
                                   data = dataset)
+  main_names <- c("beta_0", "beta_z", "beta_x", "sigma2",
+                  "rho_zx", "rho_ze", "rho_xe")
+  hyper_names <- c("hyper_a", "hyper_b1", "hyper_b2")
+  colnames(chain) <- c(main_names, rep("", 2 * N), hyper_names)
   keep <- chain
   if (burnin >= nrow(chain)) {
     warning("Burn-in exceeds chain length; returning full chain.", call. = FALSE)
@@ -360,9 +415,87 @@ CopRegBayes <- function(data, iterations = 10000, burnin = 2000, thin = 10,
     list(
       chain = chain,
       posterior = keep,
+      parameters = c(main_names, hyper_names),
+      n = N,
+      iterations = iterations,
       burnin = burnin,
-      thin = thin
+      thin = thin,
+      seed = seed
     ),
     class = "endog_copula_bayes"
   )
+}
+
+#' Print a Bayesian Copula Regression Fit
+#'
+#' @param x An object of class `endog_copula_bayes`.
+#' @param digits Number of significant digits to print.
+#' @param ... Ignored.
+#' @return `x`, invisibly.
+#' @seealso [CopRegBayes()], [summary.endog_copula_bayes()]
+#' @export
+print.endog_copula_bayes <- function(x, digits = max(3L, getOption("digits") - 3L),
+                                     ...) {
+  cat("Bayesian Gaussian copula regression (Haschka)\n")
+  cat(sprintf("Observations: %d\n", x$n))
+  cat(sprintf("Iterations: %d (burn-in %d, thinning %d, %d posterior draws)\n",
+              x$iterations, x$burnin, x$thin, nrow(x$posterior)))
+  cat("\nPosterior means:\n")
+  means <- colMeans(x$posterior[, x$parameters, drop = FALSE])
+  print(round(means, digits))
+  invisible(x)
+}
+
+#' Summarise a Bayesian Copula Regression Fit
+#'
+#' Posterior summaries (mean, standard deviation, median, and 95% credible
+#' interval) of the named model parameters, computed from the thinned
+#' posterior sample.
+#'
+#' @param object An object of class `endog_copula_bayes`.
+#' @param ... Ignored.
+#' @return An object of class `summary.endog_copula_bayes`: a list with the
+#'   matrix of summary `statistics` (one row per named parameter, columns
+#'   `mean`, `sd`, `median`, `2.5%`, and `97.5%`), the number of observations
+#'   `n`, the number of retained posterior draws `n_draws`, and the
+#'   `iterations`, `burnin`, and `thin` settings.
+#' @seealso [CopRegBayes()]
+#' @export
+summary.endog_copula_bayes <- function(object, ...) {
+  draws <- object$posterior[, object$parameters, drop = FALSE]
+  stats_mat <- t(apply(draws, 2, function(v) {
+    c(mean(v), stats::sd(v), stats::median(v),
+      stats::quantile(v, probs = c(0.025, 0.975), names = FALSE))
+  }))
+  dimnames(stats_mat) <- list(object$parameters,
+                              c("mean", "sd", "median", "2.5%", "97.5%"))
+  structure(
+    list(
+      statistics = stats_mat,
+      n = object$n,
+      n_draws = nrow(draws),
+      iterations = object$iterations,
+      burnin = object$burnin,
+      thin = object$thin
+    ),
+    class = "summary.endog_copula_bayes"
+  )
+}
+
+#' Print a Summary of a Bayesian Copula Regression Fit
+#'
+#' @param x An object of class `summary.endog_copula_bayes`.
+#' @param digits Number of significant digits to print.
+#' @param ... Ignored.
+#' @return `x`, invisibly.
+#' @export
+print.summary.endog_copula_bayes <- function(x, digits = max(3L, getOption("digits") - 3L),
+                                             ...) {
+  cat("Bayesian Gaussian copula regression (Haschka)\n")
+  cat(sprintf("Observations: %d\n", x$n))
+  cat(sprintf("Iterations: %d (burn-in %d, thinning %d, %d posterior draws)\n",
+              x$iterations, x$burnin, x$thin, x$n_draws))
+  cat("\nPosterior summary:\n")
+  print(round(x$statistics, digits))
+  invisible(x)
 }
