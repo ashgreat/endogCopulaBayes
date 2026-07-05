@@ -4,6 +4,8 @@
 [![R-CMD-check](https://github.com/ashgreat/endogCopulaBayes/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/ashgreat/endogCopulaBayes/actions/workflows/R-CMD-check.yaml)
 <!-- badges: end -->
 
+Package website: <https://ashgreat.github.io/endogCopulaBayes/>
+
 `endogCopulaBayes` implements the Bayesian Gaussian copula endogeneity
 correction of Haschka (2022b; published 2026 in the *Oxford Bulletin of
 Economics and Statistics* as "Bayesian Inference for Joint Estimation Models
@@ -28,47 +30,63 @@ remotes::install_github("ashgreat/endogCopulaBayes")
 
 ## Data format
 
-`CopRegBayes()` expects a data frame with exactly these columns (extra
-columns are ignored):
+`CopRegBayes()` has two interfaces:
 
-| Column | Role |
-|--------|------|
-| `y`    | Continuous dependent variable |
-| `z`    | Continuous endogenous regressor (must be non-normally distributed for identification) |
-| `x`    | Continuous exogenous regressor |
+- A **formula interface**, `CopRegBayes(y ~ endog | exog, data = ...)`: one
+  endogenous regressor before the bar, one exogenous regressor after it (the
+  Haschka (2026) sampler supports exactly one of each).
+- A **data-frame interface** (legacy), `CopRegBayes(data)`, which still
+  works unchanged and expects a data frame with exactly these columns (extra
+  columns are ignored):
+
+  | Column | Role |
+  |--------|------|
+  | `y`    | Continuous dependent variable |
+  | `z`    | Continuous endogenous regressor (must be non-normally distributed for identification) |
+  | `x`    | Continuous exogenous regressor |
 
 Notes:
 
 - The intercept column (`const`) is added internally — do **not** include
   one in your data.
-- Rows with missing values in `y`, `z`, or `x` are dropped before sampling.
-- The model estimated is `y = beta_0 + beta_z * z + beta_x * x + e`, with a
-  Gaussian copula linking `z`, `x`, and `e`; the correlation between `x` and
-  `e` is restricted to zero (exogeneity of `x`).
+- Rows with missing values are dropped before sampling.
+- Regressors must be numeric; factors are not supported.
+- The model estimated is `y = beta_0 + beta_z * endog + beta_x * exog + e`,
+  with a Gaussian copula linking `endog`, `exog`, and `e`; the correlation
+  between `exog` and `e` is restricted to zero (exogeneity of `exog`).
 
 ## Worked example
 
 ```r
 library(endogCopulaBayes)
 
-# Simulate data with an endogenous, log-normally distributed regressor z
+# Simulate data with an endogenous, log-normally distributed price
 set.seed(1)
 n <- 200
 sigma <- matrix(c(1, .7, 0,
                   .7, 1, .3,
                   0, .3, 1), nrow = 3, byrow = TRUE)
 eps <- mvtnorm::rmvnorm(n, sigma = sigma)
-z <- qlnorm(pnorm(eps[, 2]))          # endogenous (correlated with the error)
-x <- qnorm(pnorm(eps[, 3]))           # exogenous
+price <- qlnorm(pnorm(eps[, 2]))          # endogenous (correlated with the error)
+income <- qnorm(pnorm(eps[, 3]))          # exogenous
 e <- qnorm(pnorm(eps[, 1]), sd = sqrt(2))
-dat <- data.frame(y = 2 - 4 * z + 6 * x + e, z = z, x = x)
+dat <- data.frame(sales = 2 - 4 * price + 6 * income + e,
+                  price = price, income = income)
 
 # Fit (use many more iterations in real applications)
-fit <- CopRegBayes(dat, iterations = 10000, burnin = 2000, thin = 10,
-                   seed = 42)
+fit <- CopRegBayes(sales ~ price | income, data = dat,
+                   iterations = 10000, burnin = 2000, thin = 10, seed = 42)
 
-fit             # posterior means of the named parameters
+fit             # posterior means, labelled with the original variable names
 summary(fit)    # mean, sd, median, and 95% credible intervals
+```
+
+The data-frame interface remains fully supported for existing code:
+
+```r
+dat_legacy <- data.frame(y = dat$sales, z = dat$price, x = dat$income)
+fit_legacy <- CopRegBayes(dat_legacy, iterations = 10000, burnin = 2000,
+                          thin = 10, seed = 42)
 ```
 
 The returned object (class `endog_copula_bayes`) carries the full MCMC
@@ -76,7 +94,11 @@ The returned object (class `endog_copula_bayes`) carries the full MCMC
 named model parameters (`beta_0`, `beta_z`, `beta_x`, `sigma2`, `rho_zx`,
 `rho_ze`, `rho_xe`), followed by `2 * N` unnamed Dirichlet probability
 masses for the marginals of `z` and `x`, and three hyperprior variances
-(`hyper_a`, `hyper_b1`, `hyper_b2`). See `?CopRegBayes` for details.
+(`hyper_a`, `hyper_b1`, `hyper_b2`). When fit via the formula interface,
+`summary()` and `print()` label the `beta_z` / `beta_x` rows with the real
+endogenous/exogenous variable names (here `price` and `income`), and the
+original names are recorded in `fit$variables`. See `?CopRegBayes` for
+details.
 
 ## Related packages
 

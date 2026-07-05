@@ -2,19 +2,47 @@
 % Please edit documentation in R/copreg_bayes.R
 \name{CopRegBayes}
 \alias{CopRegBayes}
+\alias{CopRegBayes.formula}
+\alias{CopRegBayes.data.frame}
 \title{Bayesian Gaussian Copula Sampler}
 \usage{
-CopRegBayes(
+CopRegBayes(x, ...)
+
+\method{CopRegBayes}{formula}(
+  formula,
   data,
   iterations = 10000,
   burnin = 2000,
   thin = 10,
   startvalue = NULL,
-  seed = NULL
+  seed = NULL,
+  ...
+)
+
+\method{CopRegBayes}{data.frame}(
+  x,
+  iterations = 10000,
+  burnin = 2000,
+  thin = 10,
+  startvalue = NULL,
+  seed = NULL,
+  ...
 )
 }
 \arguments{
-\item{data}{Data frame containing the columns \code{y}, \code{z}, and \code{x}.}
+\item{x}{Either a \code{formula} of the form \code{y ~ endog | exog}, or a
+\code{data.frame} with columns \code{y}, \code{z}, and \code{x} (legacy interface).}
+
+\item{...}{Passed on to methods (currently unused).}
+
+\item{formula}{A two-part formula of the form \code{y ~ endog | exog}, with
+exactly one endogenous regressor before the bar and exactly one
+exogenous regressor after it (the Haschka (2026) sampler supports
+exactly one of each).}
+
+\item{data}{A \code{data.frame} containing the variables referenced in
+\code{formula} (formula method) or the columns \code{y}, \code{z}, and \code{x}
+(data-frame method).}
 
 \item{iterations}{Total number of MCMC iterations.}
 
@@ -43,6 +71,9 @@ after discarding the first \code{burnin} rows and keeping every
 \item{\code{n}}{Number of complete observations used.}
 \item{\code{iterations}, \code{burnin}, \code{thin}, \code{seed}}{The sampler settings as
 supplied.}
+\item{\code{variables}}{\code{NULL} for the data-frame interface; for the
+formula interface, a list with the original \code{response},
+\code{endogenous}, and \code{exogenous} variable names.}
 }
 }
 \description{
@@ -59,6 +90,15 @@ distribution of \code{x}, and the final three columns the hyperprior variances
 of the normal priors on the regression coefficients (\code{hyper_a},
 \code{hyper_b1}, \code{hyper_b2}). The Dirichlet mass columns are left unnamed.
 }
+\details{
+\code{CopRegBayes()} is an S3 generic. Use the formula interface
+(\code{y ~ endog | exog}) or the legacy data-frame interface (a data frame with
+columns \code{y}, \code{z}, and \code{x}); both dispatch to the same underlying sampler
+so a seeded fit is identical either way. The formula interface additionally
+records the original variable names (\verb{$variables}) and uses them to label
+the \code{beta_z} / \code{beta_x} rows in \code{\link[=print.endog_copula_bayes]{print.endog_copula_bayes()}} and
+\code{\link[=summary.endog_copula_bayes]{summary.endog_copula_bayes()}}.
+}
 \examples{
 set.seed(1)
 n <- 60
@@ -69,6 +109,13 @@ dat <- data.frame(y = 2 - 4 * z + 6 * x + rnorm(n, sd = sqrt(2)),
 fit <- CopRegBayes(dat, iterations = 100, burnin = 20, thin = 2, seed = 42)
 fit
 summary(fit)
+
+\donttest{
+# Equivalent formula interface (variable names are used as labels)
+fit_f <- CopRegBayes(y ~ z | x, data = dat, iterations = 100, burnin = 20,
+                     thin = 2, seed = 42)
+summary(fit_f)
+}
 }
 \seealso{
 \code{\link[=summary.endog_copula_bayes]{summary.endog_copula_bayes()}} and

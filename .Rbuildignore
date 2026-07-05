@@ -4,3 +4,7 @@
 ^\.Rproj\.user$
 ^\.DS_Store$
 ^\.vscode$
+^cran-comments\.md$
+^_pkgdown\.yml$
+^docs$
+^pkgdown$

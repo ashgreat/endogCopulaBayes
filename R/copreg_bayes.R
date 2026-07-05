@@ -321,14 +321,18 @@ metropolis_Gibbs_MCMC1 <- function(startvalue, iterations, data) {
 #' of the normal priors on the regression coefficients (`hyper_a`,
 #' `hyper_b1`, `hyper_b2`). The Dirichlet mass columns are left unnamed.
 #'
-#' @param data Data frame containing the columns `y`, `z`, and `x`.
-#' @param iterations Total number of MCMC iterations.
-#' @param burnin Number of initial iterations to discard.
-#' @param thin Thinning interval applied after burn-in.
-#' @param startvalue Optional numeric vector of starting values; if `NULL`, a
-#'   default based on OLS estimates and Dirichlet draws is used.
-#' @param seed Optional integer passed to [set.seed()] before any random
-#'   number is drawn; if `NULL` (default) the current RNG state is used.
+#' `CopRegBayes()` is an S3 generic. Use the formula interface
+#' (`y ~ endog | exog`) or the legacy data-frame interface (a data frame with
+#' columns `y`, `z`, and `x`); both dispatch to the same underlying sampler
+#' so a seeded fit is identical either way. The formula interface additionally
+#' records the original variable names (`$variables`) and uses them to label
+#' the `beta_z` / `beta_x` rows in [print.endog_copula_bayes()] and
+#' [summary.endog_copula_bayes()].
+#'
+#' @param x Either a `formula` of the form `y ~ endog | exog`, or a
+#'   `data.frame` with columns `y`, `z`, and `x` (legacy interface).
+#' @param ... Arguments passed on to the `formula` or `data.frame` method
+#'   (`iterations`, `burnin`, `thin`, `startvalue`, `seed`).
 #' @return An object of class `endog_copula_bayes`: a list with components
 #'   \describe{
 #'     \item{`chain`}{Numeric matrix of dimension `(iterations + 1) x
@@ -344,6 +348,9 @@ metropolis_Gibbs_MCMC1 <- function(startvalue, iterations, data) {
 #'     \item{`n`}{Number of complete observations used.}
 #'     \item{`iterations`, `burnin`, `thin`, `seed`}{The sampler settings as
 #'       supplied.}
+#'     \item{`variables`}{`NULL` for the data-frame interface; for the
+#'       formula interface, a list with the original `response`,
+#'       `endogenous`, and `exogenous` variable names.}
 #'   }
 #' @seealso [summary.endog_copula_bayes()] and
 #'   [print.endog_copula_bayes()] for posterior summaries.
@@ -357,18 +364,62 @@ metropolis_Gibbs_MCMC1 <- function(startvalue, iterations, data) {
 #' fit <- CopRegBayes(dat, iterations = 100, burnin = 20, thin = 2, seed = 42)
 #' fit
 #' summary(fit)
+#'
+#' \donttest{
+#' # Equivalent formula interface (variable names are used as labels)
+#' fit_f <- CopRegBayes(y ~ z | x, data = dat, iterations = 100, burnin = 20,
+#'                      thin = 2, seed = 42)
+#' summary(fit_f)
+#' }
 #' @importFrom copula dCopula normalCopula P2p
 #' @importFrom mvtnorm rmvnorm
 #' @importFrom LaplacesDemon rinvwishart dinvwishart
 #' @importFrom stats coef complete.cases dnorm lm median pnorm qgamma qnorm
-#'   quantile residuals runif sd var
+#'   quantile residuals runif sd var terms
 #' @export
-CopRegBayes <- function(data, iterations = 10000, burnin = 2000, thin = 10,
-                        startvalue = NULL, seed = NULL) {
+CopRegBayes <- function(x, ...) {
+  UseMethod("CopRegBayes")
+}
+
+#' @rdname CopRegBayes
+#' @param formula A two-part formula of the form `y ~ endog | exog`, with
+#'   exactly one endogenous regressor before the bar and exactly one
+#'   exogenous regressor after it (the Haschka (2026) sampler supports
+#'   exactly one of each).
+#' @param data A `data.frame` containing the variables referenced in
+#'   `formula` (formula method) or the columns `y`, `z`, and `x`
+#'   (data-frame method).
+#' @export
+CopRegBayes.formula <- function(formula, data, iterations = 10000, burnin = 2000,
+                                thin = 10, startvalue = NULL, seed = NULL, ...) {
+  components <- parse_bayes_formula(formula, data)
+  mapped <- data.frame(
+    y = data[[components$response]],
+    z = data[[components$endogenous]],
+    x = data[[components$exogenous]]
+  )
+  fit <- CopRegBayes.data.frame(mapped, iterations = iterations, burnin = burnin,
+                                thin = thin, startvalue = startvalue, seed = seed)
+  fit$variables <- components
+  fit
+}
+
+#' @rdname CopRegBayes
+#' @param iterations Total number of MCMC iterations.
+#' @param burnin Number of initial iterations to discard.
+#' @param thin Thinning interval applied after burn-in.
+#' @param startvalue Optional numeric vector of starting values; if `NULL`, a
+#'   default based on OLS estimates and Dirichlet draws is used.
+#' @param seed Optional integer passed to [set.seed()] before any random
+#'   number is drawn; if `NULL` (default) the current RNG state is used.
+#' @param ... Passed on to methods (currently unused).
+#' @export
+CopRegBayes.data.frame <- function(x, iterations = 10000, burnin = 2000, thin = 10,
+                                   startvalue = NULL, seed = NULL, ...) {
   if (!is.null(seed)) {
     set.seed(seed)
   }
-  dataset <- as.data.frame(data)
+  dataset <- as.data.frame(x)
   required <- c("y", "z", "x")
   missing <- setdiff(required, names(dataset))
   if (length(missing) > 0) {
@@ -420,10 +471,98 @@ CopRegBayes <- function(data, iterations = 10000, burnin = 2000, thin = 10,
       iterations = iterations,
       burnin = burnin,
       thin = thin,
-      seed = seed
+      seed = seed,
+      variables = NULL
     ),
     class = "endog_copula_bayes"
   )
+}
+
+# Parse a two-part `y ~ endog | exog` formula without adding a hard
+# dependency on nlme/Formula: the bar-separated right-hand side is split by
+# deparsing the call tree, mirroring the manual split used in the
+# endogCopula package's CopRegPG() but restricted to exactly one endogenous
+# and one exogenous variable, as required by this sampler.
+parse_bayes_formula <- function(formula, data) {
+  if (!inherits(formula, "formula")) {
+    stop("Argument 'formula' must be a formula.", call. = FALSE)
+  }
+  if (!is.data.frame(data)) {
+    stop("Argument 'data' must be a data.frame.", call. = FALSE)
+  }
+  if (length(formula) != 3L) {
+    stop("Argument 'formula' must be two-sided (e.g. 'y ~ z | x').", call. = FALSE)
+  }
+  if (!is.name(formula[[2]])) {
+    stop("The formula must have exactly one response variable, given as a ",
+         "single untransformed column name (e.g. 'y ~ z | x'). Apply any ",
+         "transformation to the column in 'data' before calling CopRegBayes().",
+         call. = FALSE)
+  }
+  response <- as.character(formula[[2]])
+  rhs <- formula[[3]]
+  rhs_chr <- deparse1(rhs)
+  if (!grepl("|", rhs_chr, fixed = TRUE)) {
+    stop("The formula must separate endogenous and exogenous regressors ",
+         "with '|' (e.g. 'y ~ endog | exog'). The Haschka (2026) sampler ",
+         "supports exactly one endogenous and one exogenous regressor.",
+         call. = FALSE)
+  }
+  parts <- strsplit(rhs_chr, "|", fixed = TRUE)[[1]]
+  if (length(parts) != 2L) {
+    stop("The formula must contain exactly one '|' separator ",
+         "(e.g. 'y ~ endog | exog').", call. = FALSE)
+  }
+  # Each side of the '|' must deparse to a single bare column name:
+  # transformations (log(z), I(z^2), poly(z, 2), ...) and intercept-removal
+  # syntax ('z - 1', '0 + z') would otherwise be stripped silently by
+  # all.vars() and fit a different model than the one the user asked for.
+  as_bare_symbol <- function(part) {
+    expr <- tryCatch(str2lang(trimws(part)), error = function(e) NULL)
+    if (is.null(expr) || !is.name(expr)) {
+      stop("The Haschka (2026) sampler supports exactly one endogenous and ",
+           "exactly one exogenous regressor, each given as a single ",
+           "untransformed column name: expected 'y ~ endog | exog'. ",
+           "Transformations (e.g. 'log(z)') and intercept removal ",
+           "('z - 1', '0 + z') are not supported; apply transformations to ",
+           "the columns in 'data' before calling CopRegBayes().",
+           call. = FALSE)
+    }
+    as.character(expr)
+  }
+  endogenous <- as_bare_symbol(parts[1])
+  exogenous <- as_bare_symbol(parts[2])
+  all_needed <- c(response, endogenous, exogenous)
+  missing <- setdiff(all_needed, names(data))
+  if (length(missing) > 0) {
+    stop(sprintf("Missing variables in data: %s", paste(missing, collapse = ", ")),
+         call. = FALSE)
+  }
+  factor_vars <- all_needed[vapply(all_needed, function(v) is.factor(data[[v]]), logical(1))]
+  if (length(factor_vars) > 0) {
+    stop(sprintf("Factor variables are not supported: %s",
+                 paste(factor_vars, collapse = ", ")),
+         call. = FALSE)
+  }
+  non_numeric <- all_needed[!vapply(all_needed, function(v) is.numeric(data[[v]]), logical(1))]
+  if (length(non_numeric) > 0) {
+    stop(sprintf("The following variables must be numeric: %s",
+                 paste(non_numeric, collapse = ", ")),
+         call. = FALSE)
+  }
+  list(response = response, endogenous = endogenous, exogenous = exogenous)
+}
+
+# Relabel the beta_z / beta_x entries of a parameter-name vector with the
+# original endogenous/exogenous variable names, when available (formula
+# interface only; the legacy data-frame interface keeps beta_z / beta_x).
+label_parameters <- function(parameters, variables) {
+  if (is.null(variables)) {
+    return(parameters)
+  }
+  parameters[parameters == "beta_z"] <- variables$endogenous
+  parameters[parameters == "beta_x"] <- variables$exogenous
+  parameters
 }
 
 #' Print a Bayesian Copula Regression Fit
@@ -442,6 +581,7 @@ print.endog_copula_bayes <- function(x, digits = max(3L, getOption("digits") - 3
               x$iterations, x$burnin, x$thin, nrow(x$posterior)))
   cat("\nPosterior means:\n")
   means <- colMeans(x$posterior[, x$parameters, drop = FALSE])
+  names(means) <- label_parameters(names(means), x$variables)
   print(round(means, digits))
   invisible(x)
 }
@@ -467,7 +607,7 @@ summary.endog_copula_bayes <- function(object, ...) {
     c(mean(v), stats::sd(v), stats::median(v),
       stats::quantile(v, probs = c(0.025, 0.975), names = FALSE))
   }))
-  dimnames(stats_mat) <- list(object$parameters,
+  dimnames(stats_mat) <- list(label_parameters(object$parameters, object$variables),
                               c("mean", "sd", "median", "2.5%", "97.5%"))
   structure(
     list(
