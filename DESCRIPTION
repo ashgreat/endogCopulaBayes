@@ -1,29 +1,30 @@
 Package: endogCopulaBayes
 Type: Package
 Title: Bayesian Gaussian Copula Endogeneity Correction
-Version: 0.1.0
-Authors@R: person(given = "Ashwin", family = "Malshe", role = c("aut", "cre"),
-    email = "ashwin@malshe.com")
+Version: 0.2.0
+Authors@R: c(
+    person(given = "Ashwin", family = "Malshe", role = c("aut", "cre"),
+    email = "ashwin@malshe.com"),
+    person(given = "Rouven E.", family = "Haschka", role = c("ctb", "cph"),
+    comment = "Author of the reference implementation that the sampler in this package is ported from"))
 Description: Implements the Bayesian 'Gaussian copula' endogeneity correction
-    of Haschka (2026) <doi:10.1111/obes.70023> via a Metropolis-within-Gibbs
-    sampler, ported from the published replication code into a standalone
-    package. The sampler jointly estimates the regression coefficients, the
-    residual variance, the copula correlation matrix, and Dirichlet
-    probability masses describing the marginal distributions of the
-    regressors, and returns the full MCMC chain alongside a thinned posterior
-    sample with print and summary methods.
+    of Haschka (2025) <doi:10.1111/obes.70023> via a Metropolis-within-Gibbs
+    sampler, ported from that author's reference implementation and built on
+    shared machinery in 'endogCopula'. The sampler jointly estimates the
+    regression coefficients, the residual variance, the copula correlation
+    matrix, and Dirichlet probability masses describing the marginal
+    distributions of the regressors, and returns the full MCMC chain
+    alongside a thinned posterior sample with print and summary methods.
 License: MIT + file LICENSE
 URL: https://ashgreat.github.io/endogCopulaBayes/, https://github.com/ashgreat/endogCopulaBayes
 BugReports: https://github.com/ashgreat/endogCopulaBayes/issues
 Depends: R (>= 4.1)
-Imports: LaplacesDemon,
-         copula,
+Imports: endogCopula,
          graphics,
-         invgamma,
-         mvtnorm,
-         stats
-Suggests: coda,
-          testthat (>= 3.0.0)
+         stats,
+         utils
+Suggests: testthat (>= 3.0.0)
+Remotes: ashgreat/endogCopula
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 RoxygenNote: 7.3.3
