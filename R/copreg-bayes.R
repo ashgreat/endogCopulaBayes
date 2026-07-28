@@ -1230,6 +1230,10 @@ plot.copregbayes <- function(x, which = NULL,
   n <- length(v)
   m <- max(1L, floor(10 * log10(n)))
   r <- stats::acf(v, lag.max = m, plot = FALSE)$acf[-1L]
+  ## A chain that never moves (or any other degenerate case) has non-finite
+  ## autocorrelations, which the truncation below cannot act on; report NA,
+  ## as .bayes_geweke() already does for the same input. (D3)
+  if (!all(is.finite(r))) return(NA_real_)
   ## Initial positive sequence: sum the autocorrelations up to the first
   ## negative one and stop there.  k == 1L, a chain whose lag-one
   ## autocorrelation is already negative, truncates to no lags at all and so
@@ -1275,7 +1279,10 @@ plot.copregbayes <- function(x, which = NULL,
 #' autocorrelation, all computed from the chain that is already there, plus
 #' -- on request, since it needs several chains from dispersed starting
 #' values -- the Gelman-Rubin statistic, which costs one further run of the
-#' sampler per additional chain.
+#' sampler per additional chain. The autocorrelation sum behind the
+#' effective sample size is truncated at the first negative lag, so the
+#' reported value never exceeds the number of retained draws, and is
+#' \code{NA} for a chain that does not move.
 #'
 #' \code{print()} on the result formats all of that.
 #'
@@ -1288,7 +1295,9 @@ plot.copregbayes <- function(x, which = NULL,
 #'   with the same call but a fresh, dispersed starting point drawn from
 #'   \eqn{N}(coefficients, posterior sd) for the regression coefficients, an
 #'   LKJ(1) draw for the copula correlation matrix, and a fresh Dir(1) draw
-#'   per regressor for the probability masses.
+#'   per regressor for the probability masses. The extra chains re-evaluate
+#'   the original call in the frame \code{validity()} was called from, so a
+#'   fit made inside a function still finds its data.
 #' @param power Statistical power used for the sample-size-dependent
 #'   nonnormality thresholds (Becker, Proksch & Ringle 2022). Defaults to
 #'   \code{0.8}.

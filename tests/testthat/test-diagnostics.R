@@ -85,12 +85,15 @@ test_that("the effective sample size tracks the autocorrelation", {
   n <- 4000
   set.seed(1)
   iid <- stats::rnorm(n)
-  # an AR(1) with phi = 0.8 has ESS/n = (1 - phi) / (1 + phi) = 1/9
+  # an AR(1) with phi = 0.8 has theoretical ESS/n = (1 - phi) / (1 + phi) =
+  # 1/9; the initial positive sequence estimator computed here sits slightly
+  # above that, since it sums a finite, truncated run of sample
+  # autocorrelations rather than the infinite theoretical series
   ar1 <- as.numeric(stats::filter(stats::rnorm(n, sd = sqrt(1 - 0.8^2)),
                                   0.8, method = "recursive"))
 
   expect_gt(.bayes_ess(iid), 0.5 * n)
-  expect_equal(.bayes_ess(ar1) / n, 1 / 9, tolerance = 0.4)
+  expect_lt(abs(.bayes_ess(ar1) / n - 1 / 9), 0.04)
   expect_lt(.bayes_ess(ar1), .bayes_ess(iid))
 
   # truncating at the first negative autocorrelation bounds the sum below by
@@ -101,6 +104,10 @@ test_that("the effective sample size tracks the autocorrelation", {
   expect_lte(.bayes_ess(iid), n)
   expect_lte(.bayes_ess(ar1), n)
   expect_lte(.bayes_ess(alternating), n)
+
+  # a chain that never moves has non-finite autocorrelations, and is
+  # reported as not available rather than as NaN
+  expect_true(is.na(.bayes_ess(rep(1, 500))))
 })
 
 test_that("Geweke's statistic flags a chain that has not settled", {

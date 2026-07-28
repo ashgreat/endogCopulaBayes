@@ -108,9 +108,15 @@ needs that non-normality; the posterior of the endogeneity correlations, so
 an interval that covers zero says the data carry no evidence of
 endogeneity; and convergence of the chain, through Geweke's statistic, the
 effective sample size, the lag-one autocorrelation, and the
-Metropolis-Hastings acceptance rates. The Gelman-Rubin statistic across
-several chains from dispersed starting values is available on request by
-passing `chains = TRUE`.
+Metropolis-Hastings acceptance rates. The effective sample size is bounded
+above by the number of retained draws, and is `NA` for a chain that does
+not move. The Gelman-Rubin statistic across several chains from dispersed
+starting values is available on request by passing `chains = TRUE`.
+
+The package deliberately differs from the reference implementation it
+reproduces in three small places, all inside `validity()` and none of them
+affecting any estimate; see "Differences from the reference implementation"
+in [NEWS.md](NEWS.md) for the list.
 
 ## Related packages
 

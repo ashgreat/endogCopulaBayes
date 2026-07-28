@@ -20,7 +20,9 @@ chains instead (at least 2). Each additional chain re-runs the sampler
 with the same call but a fresh, dispersed starting point drawn from
 \eqn{N}(coefficients, posterior sd) for the regression coefficients, an
 LKJ(1) draw for the copula correlation matrix, and a fresh Dir(1) draw
-per regressor for the probability masses.}
+per regressor for the probability masses. The extra chains re-evaluate
+the original call in the frame \code{validity()} was called from, so a
+fit made inside a function still finds its data.}
 
 \item{power}{Statistical power used for the sample-size-dependent
 nonnormality thresholds (Becker, Proksch & Ringle 2022). Defaults to
@@ -69,7 +71,10 @@ Geweke's statistic, the effective sample size and the lag-one
 autocorrelation, all computed from the chain that is already there, plus
 -- on request, since it needs several chains from dispersed starting
 values -- the Gelman-Rubin statistic, which costs one further run of the
-sampler per additional chain.
+sampler per additional chain. The autocorrelation sum behind the
+effective sample size is truncated at the first negative lag, so the
+reported value never exceeds the number of retained draws, and is
+\code{NA} for a chain that does not move.
 
 \code{print()} on the result formats all of that.
 }

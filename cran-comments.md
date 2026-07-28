@@ -3,13 +3,13 @@
 ## Package purpose
 
 endogCopulaBayes implements the Bayesian Gaussian copula endogeneity
-correction of Haschka (2026, Oxford Bulletin of Economics and Statistics,
+correction of Haschka (2025, Oxford Bulletin of Economics and Statistics,
 <doi:10.1111/obes.70023>) via a Metropolis-within-Gibbs sampler. The
 sampler jointly estimates the regression coefficients, the residual
 variance, the copula correlation matrix, and the Dirichlet probability
 masses describing the marginal distributions of the regressors, returning
 the full MCMC chain alongside a thinned posterior sample with print,
-summary, plot, and diagnostics methods.
+summary, plot, and validity methods.
 
 This is a new submission.
 

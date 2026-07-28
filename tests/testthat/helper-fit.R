@@ -6,6 +6,7 @@
 bayes_fit <- function(formula = y ~ z | x, data = make_sim_data()$data,
                       iterations = 300, burnin = 50, thin = 2, seed = 42,
                       ...) {
+  force(data)
   set.seed(seed)
   CopRegBAYES(formula, data = data, iterations = iterations, burnin = burnin,
               thin = thin, verbose = FALSE, ...)
