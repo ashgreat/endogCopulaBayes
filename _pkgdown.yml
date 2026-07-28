@@ -2,8 +2,28 @@ url: https://ashgreat.github.io/endogCopulaBayes/
 
 template:
   bootstrap: 5
+  bslib:
+    bg: "#FBFBF8"
+    fg: "#0E1B2A"
+    primary: "#2E7D7D"
+    secondary: "#4FA8A8"
+    success: "#2E7D7D"
+    warning: "#F0A14B"
+    base_font: {google: "Inter"}
+    heading_font: {google: "Inter Tight"}
+    code_font: {google: "JetBrains Mono"}
+    font-size-base: "1.05rem"
+    link-color: "#1F6363"
+    # Navbar background. With light-switch disabled pkgdown sets the navbar
+    # colour with the `bg-*` HTML class below, and Bootstrap's `.bg-*`
+    # utilities are `!important`, so $navbar-bg alone loses. Redefining $dark
+    # is what actually paints the navbar; $navbar-bg keeps bslib's derived
+    # navbar foreground colours in step with it.
+    dark: "#0E1B2A"
+    navbar-bg: "#0E1B2A"
 
 navbar:
+  bg: dark
   structure:
     left:  [intro, reference, news]
     right: [related, github]
@@ -24,22 +44,29 @@ reference:
   - title: Bayesian copula sampler
     desc: >
       Metropolis-within-Gibbs sampler for the Bayesian Gaussian copula
-      endogeneity correction of Haschka (2026).
+      endogeneity correction of Haschka (2025).
     contents:
-      - CopRegBayes
+      - CopRegBAYES
 
-  - title: Diagnostics
+  - title: Checking the identifying assumptions
     desc: >
-      MCMC convergence diagnostics for a fitted sampler.
+      Identification and convergence checks for a fitted sampler.
     contents:
-      - diagnostics
-      - diagnostics.endog_copula_bayes
+      - validity.copregbayes
 
-  - title: Methods
+  - title: Working with a fitted model
     desc: >
-      Methods for objects returned by CopRegBayes().
+      Extractors and S3 methods for objects returned by CopRegBAYES().
     contents:
-      - print.endog_copula_bayes
-      - summary.endog_copula_bayes
-      - print.summary.endog_copula_bayes
-      - plot.endog_copula_bayes
+      - coef.copregbayes
+      - confint.copregbayes
+      - plot.copregbayes
+      - predict.copregbayes
+      - print.copregbayes
+      - summary.copregbayes
+
+  - title: Re-exports
+    desc: >
+      Generics re-exported from endogCopula.
+    contents:
+      - reexports

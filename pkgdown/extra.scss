@@ -1,0 +1,130 @@
+// endogCopulaBayes pkgdown theme polish
+// Same bslib variables and the same restrained additions as the endogCopula
+// and endogCopulaPanel sites, so the three sites read as one family. No
+// fixed pixel heights, nothing that hides pkgdown's own navigation.
+
+// ---- Navbar: tighter, with a subtle separation from the page ----
+.navbar {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 1px 3px rgba(14, 27, 42, 0.15);
+}
+
+// No `.navbar-brand img` rule: pkgdown's navbar brand is text only, so a
+// selector for a brand image would never match anything.
+
+// ---- Home page header: title sits on a tinted band ----
+// This package has no logo, so there is no img.logo rule here.
+.template-home .page-header {
+  display: flow-root;
+  padding: 2.25rem 1.75rem 1.75rem;
+  margin-bottom: 2.25rem;
+  border-bottom: 2px solid $primary;
+  border-radius: 0.5rem 0.5rem 0 0;
+  background:
+    linear-gradient(135deg, rgba(46, 125, 125, 0.09), rgba(240, 161, 75, 0.07));
+}
+
+.template-home .page-header h1 {
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+// The tagline directly under the title on the home page.
+.template-home .page-header .version {
+  font-size: 0.95rem;
+  color: rgba(14, 27, 42, 0.6);
+}
+
+// ---- Readable line length for prose ----
+// Constrain the section blocks INSIDE <main>, not <main> itself. The row is a
+// flex container and the columns use `flex: 0 0 auto`, so a max-width on the
+// col-md-9 shrinks the flex item, drags the col-md-3 sidebar left with it and
+// strands the leftover width at the right edge of the container.
+.template-home main > *,
+.template-article main > * {
+  max-width: 46rem;
+}
+
+// Wide content inside the prose column scrolls rather than overflowing.
+.template-home main table,
+.template-article main table {
+  display: block;
+  overflow-x: auto;
+  width: fit-content;
+  max-width: 100%;
+}
+
+// ---- Tables: reference and comparison tables ----
+main table.table {
+  width: 100%;
+  margin: 1.5rem 0;
+  border-collapse: collapse;
+  font-size: 0.95rem;
+}
+
+// `.table` is in the selector to outrank Bootstrap's own
+// `.table > :not(caption) > * > *`, which otherwise wins on padding,
+// background and border width.
+main table.table th {
+  background-color: rgba(46, 125, 125, 0.1);
+  color: var(--bs-emphasis-color);
+  text-align: left;
+  border-bottom: 2px solid $primary;
+  padding: 0.5rem 0.75rem;
+}
+
+main table.table td {
+  padding: 0.5rem 0.75rem;
+  border-bottom: 1px solid rgba(14, 27, 42, 0.08);
+  vertical-align: top;
+}
+
+main table.table tr:hover td {
+  background-color: rgba(240, 161, 75, 0.08);
+}
+
+// Reference index topic names read as code without the whole row shouting.
+// pkgdown 2.x renders the index as <dl>/<dt>, not the old .ref-index table.
+.template-reference-index dt code {
+  font-weight: 600;
+}
+
+// ---- Code blocks: soft background, accent border, no harsh box ----
+// Style the <pre> only. pkgdown wraps it in <div class="sourceCode">, and that
+// wrapper carries the class too, so styling both draws the box twice.
+pre {
+  background-color: rgba(14, 27, 42, 0.035);
+  border: none;
+  border-left: 3px solid $secondary;
+  border-radius: 0.25rem;
+  padding: 0.85rem 1rem;
+}
+
+code {
+  border-radius: 0.2rem;
+}
+
+// ---- Footer: give it room instead of a cramped strip ----
+footer {
+  padding: 2rem 0;
+  margin-top: 3rem;
+  border-top: 1px solid rgba(14, 27, 42, 0.08);
+  font-size: 0.9rem;
+}
+
+// ---- Small screens: keep the prose column and tables usable ----
+@media (max-width: 575.98px) {
+  .template-home main > *,
+  .template-article main > * {
+    max-width: 100%;
+  }
+
+  .template-home .page-header {
+    padding: 1.75rem 1rem 1.25rem;
+  }
+
+  main table.table {
+    display: block;
+    overflow-x: auto;
+  }
+}

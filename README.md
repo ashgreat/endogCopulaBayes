@@ -6,20 +6,17 @@
 
 Package website: <https://ashgreat.github.io/endogCopulaBayes/>
 
-`endogCopulaBayes` implements the Bayesian Gaussian copula endogeneity
-correction of Haschka (2022b; published 2026 in the *Oxford Bulletin of
-Economics and Statistics* as "Bayesian Inference for Joint Estimation Models
-Using Copulas to Handle Endogenous Regressors"). The estimator handles an
-endogenous regressor without instruments by modelling the joint distribution
-of the regressors and the regression error with a Gaussian copula and
-sampling all unknowns — regression coefficients, residual variance, copula
-correlations, and the (Dirichlet) probability masses describing the marginal
-distributions of the regressors — with a Metropolis-within-Gibbs MCMC
-sampler.
+endogCopulaBayes implements the Bayesian Gaussian copula endogeneity
+correction of Haschka (2025, Oxford Bulletin of Economics and Statistics).
+The estimator handles an endogenous regressor without instruments. It
+models the joint distribution of the regressors and the regression error
+with a Gaussian copula, and draws every unknown quantity with a
+Metropolis-within-Gibbs MCMC sampler: the regression coefficients, the
+residual variance, the copula correlation matrix, and the Dirichlet
+probability masses describing the marginal distribution of each regressor.
 
-The code is a faithful port of the published replication scripts
-(`CopRegBAYES.R`) from the copula-based endogeneity corrections research
-code; the packaged sampler reproduces the reference chain draw for draw.
+The package builds on endogCopula, which supplies the shared model parsing
+and diagnostic helpers used across the whole toolbox.
 
 ## Installation
 
@@ -28,94 +25,107 @@ code; the packaged sampler reproduces the reference chain draw for draw.
 remotes::install_github("ashgreat/endogCopulaBayes")
 ```
 
-## Data format
+## Usage
 
-`CopRegBayes()` has two interfaces:
+The exported function is `CopRegBAYES()`. The model is specified with the
+same two part formula used across the toolbox, `y ~ endogenous | exogenous`,
+with the endogenous regressor before the bar and the exogenous regressor
+after it.
 
-- A **formula interface**, `CopRegBayes(y ~ endog | exog, data = ...)`: one
-  endogenous regressor before the bar, one exogenous regressor after it (the
-  Haschka (2026) sampler supports exactly one of each).
-- A **data-frame interface** (legacy), `CopRegBayes(data)`, which still
-  works unchanged and expects a data frame with exactly these columns (extra
-  columns are ignored):
+There is no `cdf` argument and no `ties` argument. The CDF of each
+regressor is drawn by the sampler rather than plugged in, so ties are the
+normal case and a binary regressor simply gets two probability masses.
+There is also no `nboots` argument. Inference is posterior, controlled by
+`iterations`, `burnin` and `thin` instead. Supplying `cdf`, `ties` or
+`nboots` raises an error.
 
-  | Column | Role |
-  |--------|------|
-  | `y`    | Continuous dependent variable |
-  | `z`    | Continuous endogenous regressor (must be non-normally distributed for identification) |
-  | `x`    | Continuous exogenous regressor |
-
-Notes:
-
-- The intercept column (`const`) is added internally — do **not** include
-  one in your data.
-- Rows with missing values are dropped before sampling.
-- Regressors must be numeric; factors are not supported.
-- The model estimated is `y = beta_0 + beta_z * endog + beta_x * exog + e`,
-  with a Gaussian copula linking `endog`, `exog`, and `e`; the correlation
-  between `exog` and `e` is restricted to zero (exogeneity of `exog`).
-
-## Worked example
+Exogeneity of the regressor after the bar is imposed by holding the
+matching entries of the copula correlation matrix at exactly zero.
 
 ```r
 library(endogCopulaBayes)
 
-# Simulate data with an endogenous, log-normally distributed price
 set.seed(1)
-n <- 200
-sigma <- matrix(c(1, .7, 0,
-                  .7, 1, .3,
-                  0, .3, 1), nrow = 3, byrow = TRUE)
-eps <- mvtnorm::rmvnorm(n, sigma = sigma)
-price <- qlnorm(pnorm(eps[, 2]))          # endogenous (correlated with the error)
-income <- qnorm(pnorm(eps[, 3]))          # exogenous
-e <- qnorm(pnorm(eps[, 1]), sd = sqrt(2))
-dat <- data.frame(sales = 2 - 4 * price + 6 * income + e,
-                  price = price, income = income)
+n   <- 150
+x   <- rnorm(n)
+rho <- 0.6
+eps <- matrix(rnorm(2 * n), n, 2)
+eps[, 2] <- rho * eps[, 1] + sqrt(1 - rho^2) * eps[, 2]
+z   <- 1 + x + eps[, 1]              # endogenous, correlated with e below
+e   <- eps[, 2]
+y   <- 1 + 2 * z + 0.5 * x + e
+dat <- data.frame(y = y, z = z, x = x)
 
-# Fit (use many more iterations in real applications)
-fit <- CopRegBayes(sales ~ price | income, data = dat,
-                   iterations = 10000, burnin = 2000, thin = 10, seed = 42)
-
-fit             # posterior means, labelled with the original variable names
-summary(fit)    # mean, sd, median, and 95% credible intervals
+fit <- CopRegBAYES(y ~ z | x, data = dat,
+                    iterations = 3000, burnin = 500, thin = 10)
+fit
 ```
 
-The data-frame interface remains fully supported for existing code:
+This is the real output of the example above, run with `iterations = 3000`
+to keep it fast. Use many more iterations in practice. The default is
+102,000.
 
-```r
-dat_legacy <- data.frame(y = dat$sales, z = dat$price, x = dat$income)
-fit_legacy <- CopRegBayes(dat_legacy, iterations = 10000, burnin = 2000,
-                          thin = 10, seed = 42)
+```
+Bayesian copula correction (Haschka 2025)
+
+Call:
+CopRegBAYES(formula = y ~ z | x, data = dat, iterations = 3000, 
+    burnin = 500, thin = 10)
+
+Posterior means:
+(Intercept)            z            x  
+    0.43217      2.55402     -0.04718  
+
+250 draws from 3,000 iterations.
 ```
 
-The returned object (class `endog_copula_bayes`) carries the full MCMC
-`chain` and the burned-in, thinned `posterior` matrix. Columns 1–7 are the
-named model parameters (`beta_0`, `beta_z`, `beta_x`, `sigma2`, `rho_zx`,
-`rho_ze`, `rho_xe`), followed by `2 * N` unnamed Dirichlet probability
-masses for the marginals of `z` and `x`, and three hyperprior variances
-(`hyper_a`, `hyper_b1`, `hyper_b2`). When fit via the formula interface,
-`summary()` and `print()` label the `beta_z` / `beta_x` rows with the real
-endogenous/exogenous variable names (here `price` and `income`), and the
-original names are recorded in `fit$variables`. See `?CopRegBayes` for
-details.
+`summary(fit)` adds posterior standard deviations, medians, and 95 percent
+credible intervals for the coefficients, the residual variance, and the
+endogeneity correlation:
+
+```
+Regression coefficients:
+            P. Mean  P. Median Sd       2.5%     97.5%   
+(Intercept)  0.43217  0.45108   0.26719 -0.07975  0.92392
+z            2.55402  2.53253   0.24978  2.06653  3.05664
+x           -0.04718 -0.02867   0.23309 -0.56803  0.41392
+
+Structural error variance:
+       P. Mean P. Median Sd     2.5%   97.5% 
+sigma2 0.7518  0.7418    0.1363 0.5715 1.0912
+
+Endogeneity: rho(P*, xi*) is the correlation between the normal score 
+  of an endogenous regressor and that of the structural error.
+             P. Mean  P. Median Sd       2.5%     97.5%   
+rho(z*, xi*)  0.04049  0.05296   0.22706 -0.42343  0.42077
+```
+
+## Checking convergence and identification
+
+`validity(fit)`, an S3 method re-exported from endogCopula, reports three
+things: non-normality of each endogenous regressor, since identification
+needs that non-normality; the posterior of the endogeneity correlations, so
+an interval that covers zero says the data carry no evidence of
+endogeneity; and convergence of the chain, through Geweke's statistic, the
+effective sample size, the lag-one autocorrelation, and the
+Metropolis-Hastings acceptance rates. The Gelman-Rubin statistic across
+several chains from dispersed starting values is available on request by
+passing `chains = TRUE`.
 
 ## Related packages
 
-- [endogCopula](https://github.com/ashgreat/endogCopula) — cross-sectional
-  copula endogeneity corrections (Park & Gupta 2012; Yang et al. 2025; Hu et
-  al. 2025; Breitung et al. 2024; Haschka 2024; Liengaard et al. 2025).
-- [endogCopulaPanel](https://github.com/ashgreat/endogCopulaPanel) — the
-  fixed-effects panel maximum-likelihood estimator of Haschka (2022).
+- endogCopula (<https://github.com/ashgreat/endogCopula>): cross-sectional
+  Gaussian copula corrections with a shared formula interface.
+- endogCopulaPanel (<https://github.com/ashgreat/endogCopulaPanel>): the
+  fixed effects panel maximum likelihood estimator of Haschka (2022).
 
 ## References
 
-- Haschka, R. E. (2026). Bayesian Inference for Joint Estimation Models
-  Using Copulas to Handle Endogenous Regressors. *Oxford Bulletin of
-  Economics and Statistics*. (Working paper version: Haschka 2022b,
-  <https://ssrn.com/abstract=4235194>.)
+- Haschka, R. E. (2025). Bayesian inference for joint estimation models
+  using copulas to handle endogenous regressors. Oxford Bulletin of
+  Economics and Statistics. doi:10.1111/obes.70023
 - Park, S. and S. Gupta (2012). Handling endogenous regressors by joint
-  estimation using copulas. *Marketing Science* 31(4), 567–586.
+  estimation using copulas. Marketing Science, 31(4), 567-586.
 
 ## License
 
