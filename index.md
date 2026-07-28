@@ -105,8 +105,18 @@ endogeneity correlations, so an interval that covers zero says the data
 carry no evidence of endogeneity; and convergence of the chain, through
 Geweke’s statistic, the effective sample size, the lag-one
 autocorrelation, and the Metropolis-Hastings acceptance rates. The
-Gelman-Rubin statistic across several chains from dispersed starting
-values is available on request by passing `chains = TRUE`.
+effective sample size is bounded above by the number of retained draws,
+and is `NA` for a chain that does not move. The Gelman-Rubin statistic
+across several chains from dispersed starting values is available on
+request by passing `chains = TRUE`.
+
+The package deliberately differs from the reference implementation it
+reproduces in three small places, all inside
+[`validity()`](https://ashgreat.github.io/endogCopula/reference/validity.html)
+and none of them affecting any estimate; see “Differences from the
+reference implementation” in
+[NEWS.md](https://ashgreat.github.io/endogCopulaBayes/NEWS.md) for the
+list.
 
 ## Related packages
 

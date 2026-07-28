@@ -16,7 +16,10 @@ chain itself: Geweke's statistic, the effective sample size and the
 lag-one autocorrelation, all computed from the chain that is already
 there, plus – on request, since it needs several chains from dispersed
 starting values – the Gelman-Rubin statistic, which costs one further
-run of the sampler per additional chain.
+run of the sampler per additional chain. The autocorrelation sum behind
+the effective sample size is truncated at the first negative lag, so the
+reported value never exceeds the number of retained draws, and is `NA`
+for a chain that does not move.
 
 [`print()`](https://rdrr.io/r/base/print.html) on the result formats all
 of that.
@@ -47,7 +50,10 @@ print(x, digits = max(3L, getOption("digits") - 3L), ...)
   call but a fresh, dispersed starting point drawn from
   \\N\\(coefficients, posterior sd) for the regression coefficients, an
   LKJ(1) draw for the copula correlation matrix, and a fresh Dir(1) draw
-  per regressor for the probability masses.
+  per regressor for the probability masses. The extra chains re-evaluate
+  the original call in the frame
+  [`validity()`](https://ashgreat.github.io/endogCopula/reference/validity.html)
+  was called from, so a fit made inside a function still finds its data.
 
 - power:
 
