@@ -90,7 +90,7 @@ coef(fit); vcov(fit); nobs(fit); formula(fit)
 #> x            0.01822975 -0.17790201  0.15221237
 #> [1] 60
 #> y ~ z | x
-#> <environment: 0x562ba41e1988>
+#> <environment: 0x564f442ef510>
 head(fitted(fit)); head(residuals(fit))
 #> [1]  3.7202734  1.1811879  0.2712549  4.3285814  0.2603980 -0.5741297
 #>          1          2          3          4          5          6 
