@@ -1,8 +1,8 @@
 pandoc: 3.8.3
-pkgdown: 2.2.0
+pkgdown: 2.2.1
 pkgdown_sha: ~
 articles: {}
-last_built: 2026-07-05T06:38Z
+last_built: 2026-07-28T03:05Z
 urls:
   reference: https://ashgreat.github.io/endogCopulaBayes/reference
   article: https://ashgreat.github.io/endogCopulaBayes/articles

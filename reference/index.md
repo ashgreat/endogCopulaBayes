@@ -3,29 +3,46 @@
 ## Bayesian copula sampler
 
 Metropolis-within-Gibbs sampler for the Bayesian Gaussian copula
-endogeneity correction of Haschka (2026).
+endogeneity correction of Haschka (2025).
 
-- [`CopRegBayes()`](https://ashgreat.github.io/endogCopulaBayes/reference/CopRegBayes.md)
-  : Bayesian Gaussian Copula Sampler
+- [`CopRegBAYES()`](https://ashgreat.github.io/endogCopulaBayes/reference/CopRegBayes.md)
+  : Bayesian Gaussian copula endogeneity correction
 
-## Diagnostics
+## Checking the identifying assumptions
 
-MCMC convergence diagnostics for a fitted sampler.
+Identification and convergence checks for a fitted sampler.
 
-- [`diagnostics()`](https://ashgreat.github.io/endogCopulaBayes/reference/diagnostics.md)
-  : MCMC Convergence Diagnostics
-- [`diagnostics(`*`<endog_copula_bayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/diagnostics.endog_copula_bayes.md)
-  : MCMC Convergence Diagnostics for a Bayesian Copula Regression Fit
+- [`validity(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/validity.copregbayes.md)
+  [`print(`*`<copregbayes.validity>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/validity.copregbayes.md)
+  : Identification and convergence checks for a copregbayes fit
 
-## Methods
+## Working with a fitted model
 
-Methods for objects returned by CopRegBayes().
+Extractors and S3 methods for objects returned by CopRegBAYES().
 
-- [`print(`*`<endog_copula_bayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/print.endog_copula_bayes.md)
-  : Print a Bayesian Copula Regression Fit
-- [`summary(`*`<endog_copula_bayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/summary.endog_copula_bayes.md)
-  : Summarise a Bayesian Copula Regression Fit
-- [`print(`*`<summary.endog_copula_bayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/print.summary.endog_copula_bayes.md)
-  : Print a Summary of a Bayesian Copula Regression Fit
-- [`plot(`*`<endog_copula_bayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/plot.endog_copula_bayes.md)
-  : Plot a Bayesian Copula Regression Fit
+- [`coef(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/copregbayes-extract.md)
+  [`vcov(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/copregbayes-extract.md)
+  [`nobs(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/copregbayes-extract.md)
+  [`formula(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/copregbayes-extract.md)
+  [`fitted(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/copregbayes-extract.md)
+  [`residuals(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/copregbayes-extract.md)
+  : Extract components of a copregbayes fit
+- [`confint(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/confint.copregbayes.md)
+  : Credible intervals for a copregbayes fit
+- [`plot(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/plot.copregbayes.md)
+  : Diagnostic plots for a copregbayes fit
+- [`predict(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/predict.copregbayes.md)
+  : Predict from a copregbayes fit
+- [`print(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/print.copregbayes.md)
+  : Print a copregbayes fit
+- [`summary(`*`<copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/summary.copregbayes.md)
+  [`print(`*`<summary.copregbayes>`*`)`](https://ashgreat.github.io/endogCopulaBayes/reference/summary.copregbayes.md)
+  : Summarise a copregbayes fit
+
+## Re-exports
+
+Generics re-exported from endogCopula.
+
+- [`reexports`](https://ashgreat.github.io/endogCopulaBayes/reference/reexports.md)
+  [`validity`](https://ashgreat.github.io/endogCopulaBayes/reference/reexports.md)
+  : Objects exported from other packages
