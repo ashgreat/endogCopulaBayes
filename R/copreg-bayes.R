@@ -1350,6 +1350,12 @@ validity.copregbayes <- function(object, chains = FALSE, power = 0.8,
   if (!isFALSE(chains)) {
     nc <- if (isTRUE(chains)) 4L else as.integer(chains)
     if (nc < 2L) stop("Gelman-Rubin needs at least two chains.", call. = FALSE)
+    ## The extra chains re-evaluate the original call, so they have to be
+    ## evaluated where that call makes sense: the frame validity() was called
+    ## from.  Taking it here rather than inside the lapply() below matters,
+    ## since parent.frame() there is lapply()'s own frame, from which the
+    ## caller's data is reachable only if it happens to be global.
+    where <- parent.frame()
     cl <- object$call
     cl$verbose <- verbose
     se <- object$std.error
@@ -1364,7 +1370,7 @@ validity.copregbayes <- function(object, chains = FALSE, power = 0.8,
         Sigma = .bayes_rlkj(length(object$copula.names)),
         lambda = lapply(object$margins, function(m)
         { g <- stats::rgamma(m$m, 1); g / sum(g) }))
-      eval(cl, parent.frame())$draws
+      eval(cl, where)$draws
     })
     reps <- c(list(object$draws), reps)
     n <- nrow(reps[[1L]]); M <- length(reps)
