@@ -126,13 +126,13 @@ validity(fit)
 #>     Geweke compares the first tenth with the last half of the draws and
 #>     is a z statistic, so |Geweke| > 2 is a warning sign. ESS is the
 #>     effective number of independent draws behind 30 retained ones.
-#>                Geweke     ESS    AC(1)
-#> (Intercept)    4.5229  18.240  0.29615
-#> z            -11.1126   5.897  0.76881
-#> x             13.0992   5.391  0.66270
-#> sigma2        -7.5163   5.991  0.58845
-#> rho(z*, x*)   -0.9601 798.730 -0.06026
-#> rho(z*, xi*)   7.1434   6.304  0.76326
+#>                Geweke    ESS    AC(1)
+#> (Intercept)    4.5229 18.240  0.29615
+#> z            -11.1126  5.897  0.76881
+#> x             13.0992  5.391  0.66270
+#> sigma2        -7.5163  5.991  0.58845
+#> rho(z*, x*)   -0.9601 30.000 -0.06026
+#> rho(z*, xi*)   7.1434  6.304  0.76326
 #>     Acceptance rates: coefficients 0.835, sigma2 0.865
 #> 
 #> [4] Gelman-Rubin was not computed
