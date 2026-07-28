@@ -1230,8 +1230,14 @@ plot.copregbayes <- function(x, which = NULL,
   n <- length(v)
   m <- max(1L, floor(10 * log10(n)))
   r <- stats::acf(v, lag.max = m, plot = FALSE)$acf[-1L]
+  ## Initial positive sequence: sum the autocorrelations up to the first
+  ## negative one and stop there.  k == 1L, a chain whose lag-one
+  ## autocorrelation is already negative, truncates to no lags at all and so
+  ## to ESS = n; keeping the rest of the sequence instead would add up a tail
+  ## of noise and could report several times as many effective draws as there
+  ## are draws.
   k <- which(r < 0)[1L]
-  if (!is.na(k) && k > 1L) r <- r[seq_len(k - 1L)]
+  if (!is.na(k)) r <- r[seq_len(k - 1L)]
   max(1, n / (1 + 2 * sum(r)))
 }
 

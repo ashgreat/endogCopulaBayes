@@ -92,6 +92,15 @@ test_that("the effective sample size tracks the autocorrelation", {
   expect_gt(.bayes_ess(iid), 0.5 * n)
   expect_equal(.bayes_ess(ar1) / n, 1 / 9, tolerance = 0.4)
   expect_lt(.bayes_ess(ar1), .bayes_ess(iid))
+
+  # truncating at the first negative autocorrelation bounds the sum below by
+  # zero, so no series can be reported as carrying more effective draws than
+  # it has draws -- including one that anticorrelates from lag one onwards
+  set.seed(2)
+  alternating <- rep(c(-1, 1), n / 2) + stats::rnorm(n, sd = 0.1)
+  expect_lte(.bayes_ess(iid), n)
+  expect_lte(.bayes_ess(ar1), n)
+  expect_lte(.bayes_ess(alternating), n)
 })
 
 test_that("Geweke's statistic flags a chain that has not settled", {
